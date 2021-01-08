@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/grey_1"
+    android:orientation="vertical">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="48dp"
+        android:text="Login"
+        android:textColor="@color/pink_1"
+        android:textSize="36dp"
+        android:textStyle="bold" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="60dp"
+        android:layout_marginTop="70dp"
+        android:layout_marginRight="60dp">
+
+        <Spinner
+            android:id="@+id/activityLogin_accountSpinner"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <EditText
+            android:id="@+id/login_accountEt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_pink1_round12"
+            android:ems="10"
+            android:gravity="center"
+            android:hint="email"
+            android:inputType="textEmailAddress"
+            android:padding="12dp"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:textColor="@color/white"
+            android:textCursorDrawable="@null" />
+    </FrameLayout>
+
+    <EditText
+        android:id="@+id/login_passwordEt"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="60dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginRight="60dp"
+        android:background="@drawable/bg_pink1_round12"
+        android:clickable="false"
+        android:gravity="center"
+        android:hint="password"
+        android:inputType="textPassword"
+        android:padding="12dp"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:textColor="@color/white"
+        android:textCursorDrawable="@null" />
+
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="50dp" />
+
+    <Button
+        android:id="@+id/activityLogin_loginButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="60dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginRight="60dp"
+        android:background="@drawable/bg_pink1_round12"
+        android:gravity="center"
+        android:padding="16dp"
+        android:text="@string/ok"
+        android:textColor="@color/white"
+        android:onClick="startLogin"/>
+
+
+    <TextView
+        android:id="@+id/Login_versionTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="16dp"
+        android:text="@string/version"
+        android:textColor="@android:color/darker_gray" />
+
+
+</LinearLayout>
