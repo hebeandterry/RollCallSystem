@@ -12,22 +12,17 @@ import android.os.Bundle
 import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
-import android.widget.Toast
+import android.view.ViewGroup
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.example.rollcallsystem.BuildConfig
 import com.example.rollcallsystem.R
 import com.example.rollcallsystem.data.*
 import com.example.rollcallsystem.feature.*
-import com.example.rollcallsystem.netework.ApiService
-import com.example.rollcallsystem.netework.ApiUtils
+import com.example.rollcallsystem.network.HttpUrlConnection
+import com.example.rollcallsystem.network.HttpRequestListener
 import com.google.gson.Gson
 import kotlinx.android.synthetic.main.activity_login.*
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.RequestBody
-import okhttp3.RequestBody.Companion.toRequestBody
-import java.io.IOException
 
 private const val REQUEST_ENABLE_BT = 0
 private const val REQUEST_ENABLE_SYSTEM_LOCATION = 1
@@ -36,12 +31,18 @@ private const val PERMISSION_REQUEST_FINE_LOCATION = 2
 const val QUERY_BEACON_BODY = "{\"query\":\"{ allBeaconEntities(active: true) {results(limit: 5000) { mac name }}}\"}"
 const val QUERY_POSITION_BODY = "{\"query\":\"{ allAreas(limit: 5000, enableForRollCall: true) {name positions{id name} } }\"}"
 
-class LoginActivity : AppCompatActivity() {
+enum class HttpRequestType {
+    LOGIN, GET_ROLL_CALL_POSITION, GET_MEMBER_LIST
+}
 
-    private lateinit var view : View
+class LoginActivity : BaseActivity(), HttpRequestListener {
+
+    private lateinit var dialogView : View
     private lateinit var dialog: AlertDialog
+    private lateinit var httpUrlConnection: HttpUrlConnection
 
-    var mApiService: ApiService? = null
+    var accountToken: AccountToken? = null
+    var isPermissionOK = false
     private val yes = "1"
     private val no = "0"
 
@@ -49,36 +50,40 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
         checkPermission()
-        mApiService = ApiUtils.apiService
+        httpUrlConnection = HttpUrlConnection()
+        httpUrlConnection.registerListener(this)
 
-        view = LayoutInflater.from(this).inflate(R.layout.dialog_item, null)
+        dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_item, null)
         Login_versionTextView.append(BuildConfig.VERSION_NAME)
 
         login_accountEt.setText( MyPreferences.getInstance(this).getPreferences(ACCOUNT, ""))
         login_passwordEt.setText( MyPreferences.getInstance(this).getPreferences(PASSWORD, ""))
 
-        BluetoothManager.memberList = MyPreferences.getInstance(this).getList("MEMBER_STATE")
-
+        BluetoothManager.memberList = MyPreferences.getInstance(this).getList(MEMBER_LIST)
         autoLogin()
+    }
+
+    override fun onResume() {
+        super.onResume()
     }
 
     // Check BT, GPS, location permission.
     private fun checkPermission () {
+
         if (!isBluetoothEnable())
             enableBluetooth()
         else if (!isSystemLocationEnable())
             startSystemLocationPage()
+        else if (!checkRequestPermission( Manifest.permission.ACCESS_FINE_LOCATION))
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                PERMISSION_REQUEST_FINE_LOCATION)
         else
-            checkRequestPermission(Manifest.permission.ACCESS_FINE_LOCATION,
-                PERMISSION_REQUEST_FINE_LOCATION
-            )
+            isPermissionOK = true
+
     }
 
-    private fun checkRequestPermission(requestPermission: String, requestCode: Int) : Boolean{
-        return if (checkSelfPermission(requestPermission) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(requestPermission), requestCode)
-            false
-        }else false
+    private fun checkRequestPermission(requestPermission: String) : Boolean{
+        return checkSelfPermission(requestPermission) == PackageManager.PERMISSION_GRANTED
     }
 
     //return false if adapter is NULL.
@@ -97,13 +102,11 @@ class LoginActivity : AppCompatActivity() {
     //Show a dialog and turn to start system location page.
     private fun startSystemLocationPage () {
         val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-        AlertDialog.Builder(this)
-            .setMessage("System Location is not Available. Please Enable It.")
-            .setTitle("Warning")
-            .setPositiveButton("OK") { _, _ -> startActivityForResult(intent,
-                REQUEST_ENABLE_SYSTEM_LOCATION
-            )}
-            .show()
+
+        showAlertDialog("Warning",
+            "請打開手機定位功能 \n\nSystem Location is not Available. Please Enable It.") {
+            startActivityForResult(intent, REQUEST_ENABLE_SYSTEM_LOCATION)
+        }
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>,
@@ -111,7 +114,7 @@ class LoginActivity : AppCompatActivity() {
         when (requestCode) {
             PERMISSION_REQUEST_FINE_LOCATION -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(this, "Location Permission Granted", Toast.LENGTH_SHORT).show()
+                    showToast(this, "Location Permission Granted")
                 } else {
                     checkPermission()
                 }
@@ -133,10 +136,13 @@ class LoginActivity : AppCompatActivity() {
 
     // It will login automatically after the first time login until logging out.
     private fun autoLogin() {
-        if (MyPreferences.getInstance(this).getPreferences(AUTO_LOGIN, no) == yes)
+        if (MyPreferences.getInstance(this).getPreferences(AUTO_LOGIN, no) == yes &&
+                isPermissionOK)
         {
             startLogin(activityLogin_loginButton)
         }
+
+        println("${MyPreferences.getInstance(this).getPreferences(AUTO_LOGIN, no)} $isPermissionOK")
     }
 
     //Called when loginButton is clicked.
@@ -144,19 +150,25 @@ class LoginActivity : AppCompatActivity() {
         val loginAccount = LoginAccount(login_accountEt.text.toString(), login_passwordEt.text.toString())
 
         if (isOkToLogin(loginAccount)) {
-            recordAccount(loginAccount)
+            //Can't set view repeatedly, need to remove.
+            if(this.dialogView.parent !=null) {
+                (this.dialogView.parent as ViewGroup).removeView(dialogView)
+            }
 
-            dialog = showDialog()
+            dialog = showProgressDialog(dialogView)
             Thread {
                 val rtn = loginToServer(loginAccount)
-                closeDialog()
+                closeDialog(dialog)
 
                 if (rtn) {
+                    recordAccount(loginAccount)
                     finish()
                     startActivity(Intent(this,
-                        RollCallActivity::class.java).apply
+                        ChooseLocationActivity::class.java).apply
                     {
                         putExtra(ACCOUNT, loginAccount.username)
+                        putExtra("TOKEN", accountToken?.token)
+
                     })
                 }
 
@@ -169,10 +181,10 @@ class LoginActivity : AppCompatActivity() {
     //Check types data and the internet.
     private fun isOkToLogin(loginAccount: LoginAccount) :Boolean {
         return if ( !isAccountAvailable(loginAccount)) {
-            Toast.makeText(this, "Account or Password can't be empty!", Toast.LENGTH_SHORT).show()
+            showToast(this, "Account or Password can't be empty!")
             false
         } else if ( !isInternetAvailable(this)) {
-            Toast.makeText(this, "Internet is not available, please check it!", Toast.LENGTH_SHORT).show()
+            showToast(this, "Internet is not available, please check it!")
             false
         } else
             true
@@ -201,18 +213,20 @@ class LoginActivity : AppCompatActivity() {
     //Get token first and then get member list.
     private fun loginToServer(loginAccount: LoginAccount): Boolean{
 
-        val accountToken: AccountToken? = httpRequest(Gson().toJson(loginAccount), 1) as AccountToken?
+        accountToken = httpUrlConnection
+            .httpRequest(Gson().toJson(loginAccount), HttpRequestType.LOGIN) as AccountToken?
 
+        //If get account successful, get member list.
         if (accountToken != null)
         {
             if (BluetoothManager.memberList.isEmpty()) {
 
-                val rollCallPosition = httpRequest(QUERY_POSITION_BODY, 2, accountToken?.token) as Test?
+                val data: Beacon?
+                        = httpUrlConnection.httpRequest(QUERY_BEACON_BODY,
+                    HttpRequestType.GET_MEMBER_LIST, accountToken!!.token) as Beacon?
 
-                val data: Beacon? = httpRequest(QUERY_BEACON_BODY, 3, accountToken?.token) as Beacon?
-
-                if (data != null && rollCallPosition != null) {
-                    addServerDataToList(data, rollCallPosition.rollCallPosition.allAreas[0].positions[0].id)
+                if (data != null) {
+                    addServerDataToList(data)//, rollCallPosition.rollCallPosition.allAreas[0].positions[0].id)
                     return true
                 }
             }
@@ -242,65 +256,31 @@ class LoginActivity : AppCompatActivity() {
          */
     }
 
-    private fun httpRequest (data: String, type: Int, vararg parameters: String): Any? {
-
-        try {
-            val body: RequestBody =
-                data.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
-
-            val response = when (type) {
-                1 -> {
-                    mApiService!!.loginPost(body).execute()
-                }
-                2-> {
-                    mApiService!!.getRollCallPositionPost(parameters[0], body).execute()
-                }
-                else -> {
-                    mApiService!!.getBeaconsPost(parameters[0], body).execute()
-                }
-            }
-
-            return if (response.isSuccessful) {
-                response.body()
-            } else {
-
-                runOnUiThread {
-                    Toast.makeText(
-                        this,
-                        "response: ${response.errorBody()?.string() ?: "The error response is NULL"}",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-                null
-            }
-        }catch (e: IOException)
-        {
-            println("Login error: $e")
-            return null
-        }
-    }
-
     //Set the result to list, and save it local.
-    private fun addServerDataToList (data: Beacon, position: String) {
+    private fun addServerDataToList (data: Beacon) {
         for (member in data.data.allBeacon.result)
         {
-            val beacon = MemberFormat(member.mac, member.name, position)
+            val beacon = MemberFormat(member.mac, member.name)
             BluetoothManager.memberList.add(beacon)
         }
 
-        MyPreferences.getInstance(this).setList("MEMBER_STATE", BluetoothManager.memberList)
+        MyPreferences.getInstance(this).setList(MEMBER_LIST, BluetoothManager.memberList)
 
         println(
             "${BluetoothManager.memberList.size} response: " + data.data.allBeacon.result
         )
     }
 
-    private fun showDialog(): AlertDialog =
-         AlertDialog.Builder(this)
-                .setView(view)
-                .setCancelable(false)
-                .show()
+    override fun onHttpRequestResponse() {
+        TODO("Not yet implemented")
+    }
 
+    override fun onHttpRequestErrorResponse(errorBody: String?) {
+        showToast(this,
+            when {
+                errorBody!!.contains("non_field") -> "Account or Password isn't correct."
+                else -> errorBody
+            })
+    }
 
-    fun closeDialog() = dialog.dismiss()
 }

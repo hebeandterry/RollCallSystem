@@ -10,6 +10,7 @@ import com.example.rollcallsystem.data.MemberFormat
 object BluetoothManager {
 
     var memberList = ArrayList<MemberFormat>()
+    private var listener: ScanDeviceDataListener? = null
 
     private val bluetoothLeScanner: BluetoothLeScanner = BluetoothAdapter.getDefaultAdapter().bluetoothLeScanner
 
@@ -17,6 +18,7 @@ object BluetoothManager {
         override fun onScanResult(callbackType: Int, result: ScanResult?) {
             super.onScanResult(callbackType, result)
             updateMemberListByScanData(result)
+            listener?.onScanDeviceDataResponse()
             //Log.d("BluetoothManager","onScanResult: ${result?.device?.address} - ${result?.device?.name}")
         }
 
@@ -28,6 +30,8 @@ object BluetoothManager {
         override fun onScanFailed(errorCode: Int) {
             super.onScanFailed(errorCode)
             Log.d("BluetoothManager", "onScanFailed: $errorCode")
+            listener?.onScanDeviceDataErrorResponse(errorCode)
+            //BluetoothAdapter.getDefaultAdapter().disable();
         }
 
     }
@@ -40,7 +44,13 @@ object BluetoothManager {
             member.bArrived = true
     }
 
+    //Register a listener form RollCallActivity to get scan result.
+    fun registerListener(listener: ScanDeviceDataListener) {
+        this.listener = listener
+    }
 
+    //Only for legacy scan, if you want to scan extended package,
+    //need to add scan filter and setting.
     fun onStart() {
         Log.d("BluetoothManager","onStart()")
         bluetoothLeScanner.startScan(
@@ -55,4 +65,10 @@ object BluetoothManager {
             bleScanner
         )
     }
+}
+
+interface ScanDeviceDataListener {
+    fun onScanDeviceDataResponse()
+
+    fun onScanDeviceDataErrorResponse(errorCode: Int)
 }

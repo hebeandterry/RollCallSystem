@@ -12,6 +12,7 @@ const val ROLL_CALL = "ROLL_CALL"
 const val ACCOUNT = "ACCOUNT"
 const val PASSWORD = "PASSWORD"
 const val AUTO_LOGIN = "AUTO_LOGIN"
+const val MEMBER_LIST = "MEMBER_LIST"
 
 class MyPreferences private constructor(private val context: Context) {
 
@@ -47,7 +48,7 @@ class MyPreferences private constructor(private val context: Context) {
 
     @SuppressLint("CommitPrefEdits")
     fun cleanPreferences() {
-        settings = context.getSharedPreferences("ACCOUNT", MODE_PRIVATE)
+        settings = context.getSharedPreferences(ACCOUNT, MODE_PRIVATE)
         settings.edit().clear().apply()
     }
 

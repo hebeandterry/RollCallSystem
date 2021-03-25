@@ -3,10 +3,15 @@
     <string name="log_out">Log out</string>
     <string name="setting">setting</string>
     <string name="version">version:</string>
-    <string name="ok">ok</string>
+    <string name="ok">OK</string>
     <string name="keep_login">保持登入</string>
     <string name="start_scan">Start Scan</string>
     <string name="stop_scan">Stop Scan</string>
     <string name="logining">登入中</string>
-    <string name="not_arrive">尚未出現</string>
+    <string name="arrived">抵達</string>
+    <string name="not_arrive">尚未抵達</string>
+    <string name="login">Login</string>
+    <string name="roll_call_error">點名異常</string>
+    <string name="roll_call_stop">點名停止</string>
+    <string name="roll_calling">點名中</string>
 </resources>

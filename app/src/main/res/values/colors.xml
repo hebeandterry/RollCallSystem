@@ -8,6 +8,7 @@
     <color name="grey_5">#EEEEEE</color>
 
     <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
 
     <color name="transparent8">#40000000</color>
 
@@ -15,4 +16,9 @@
     <color name="pink_5">#FFACB2</color>
 
     <color name="purple_1">#AA92EF</color>
+
+    <color name="blue_1">#EAF4FB</color>
+    <color name="blue_2">#1B14DC</color>
+
+    <color name="green_1">#58D68D</color>
 </resources>

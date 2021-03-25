@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/grey_1"
+    android:background="@color/blue_1"
     android:orientation="vertical">
 
     <TextView
@@ -11,7 +11,8 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:layout_marginTop="48dp"
-        android:text="Login"
+        android:fontFamily="@font/carter_one"
+        android:text="@string/login"
         android:textColor="@color/pink_1"
         android:textSize="36dp"
         android:textStyle="bold" />
@@ -35,7 +36,7 @@
             android:background="@drawable/bg_pink1_round12"
             android:ems="10"
             android:gravity="center"
-            android:hint="email"
+            android:hint="account"
             android:inputType="textEmailAddress"
             android:padding="12dp"
             android:textAppearance="?android:attr/textAppearanceSmall"
@@ -72,11 +73,12 @@
         android:layout_marginTop="16dp"
         android:layout_marginRight="60dp"
         android:background="@drawable/bg_pink1_round12"
+        android:fontFamily="@font/carter_one"
         android:gravity="center"
+        android:onClick="startLogin"
         android:padding="16dp"
         android:text="@string/ok"
-        android:textColor="@color/white"
-        android:onClick="startLogin"/>
+        android:textColor="@color/white" />
 
 
     <TextView
@@ -85,6 +87,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="16dp"
+        android:fontFamily="@font/carter_one"
         android:text="@string/version"
         android:textColor="@android:color/darker_gray" />
 

@@ -1,16 +1,18 @@
 package com.example.rollcallsystem.ui
 
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
+import android.graphics.Typeface
 import android.os.Bundle
 import android.view.View
-import androidx.appcompat.app.AlertDialog
-import com.example.rollcallsystem.feature.BluetoothManager
-import com.example.rollcallsystem.feature.MyPreferences
+
 import com.example.rollcallsystem.R
+import com.example.rollcallsystem.feature.AUTO_LOGIN
+import com.example.rollcallsystem.feature.BluetoothManager
+import com.example.rollcallsystem.feature.MEMBER_LIST
+import com.example.rollcallsystem.feature.MyPreferences
 import kotlinx.android.synthetic.main.activity_system.*
 
-class SystemActivity : AppCompatActivity() {
+class SystemActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_system)
@@ -21,23 +23,16 @@ class SystemActivity : AppCompatActivity() {
     private val listener = View.OnClickListener { view ->
         when (view.id) {
             R.id.system_logoutTv -> {
-                showDialog()
+                showAlertDialog("Warning",
+                    "登出將會清空點名資料 \n\nThe roll call status will reset after logout.") {
+                    MyPreferences.getInstance(this).setPreferences(AUTO_LOGIN, "0")
+                    BluetoothManager.memberList.clear()
+                    MyPreferences.getInstance(this).setList(MEMBER_LIST, BluetoothManager.memberList)
+                    val intent = Intent(this, LoginActivity::class.java)
+                        .setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
+                    startActivity(intent)
+                }
             }
         }
     }
-
-    fun showDialog() {
-        AlertDialog.Builder(this)
-            .setTitle("Warning")
-            .setMessage("The roll call state will reset after logout.")
-            .setPositiveButton(R.string.ok) { _, _ -> MyPreferences.getInstance(this).setPreferences("AUTO_LOGIN", "0")
-                BluetoothManager.memberList.clear()
-                MyPreferences.getInstance(this).setList("MEMBER_STATE", BluetoothManager.memberList)
-                val intent = Intent(this, LoginActivity::class.java)
-                    .setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
-                startActivity(intent)}
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
 }

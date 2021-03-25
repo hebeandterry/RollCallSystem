@@ -5,21 +5,20 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.view.View
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.viewpager2.widget.ViewPager2
-import com.example.rollcallsystem.feature.BluetoothManager
-import com.example.rollcallsystem.feature.MyPreferences
 import com.example.rollcallsystem.R
-import com.example.rollcallsystem.netework.UpdateToServer
+import com.example.rollcallsystem.network.UpdateToServer
 import com.example.rollcallsystem.adapter.PageAdapter
-import com.example.rollcallsystem.feature.RecyclerViewManager
+import com.example.rollcallsystem.feature.*
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.android.synthetic.main.activity_roll_call.*
-import kotlin.concurrent.thread
 
 
-class RollCallActivity : AppCompatActivity(), View.OnClickListener {
+class RollCallActivity : AppCompatActivity(), View.OnClickListener, ScanDeviceDataListener {
 
     lateinit var tabLayout: TabLayout
     lateinit var viewPager2: ViewPager2
@@ -58,6 +57,7 @@ class RollCallActivity : AppCompatActivity(), View.OnClickListener {
         }.attach()
 
         updateToServer = UpdateToServer()
+        BluetoothManager.registerListener(this)
 
         startRollCalling()
     }
@@ -74,17 +74,14 @@ class RollCallActivity : AppCompatActivity(), View.OnClickListener {
         stopRollCalling()
 
         modifyTabName()
-        MyPreferences.getInstance(this).setList("MEMBER_STATE", BluetoothManager.memberList)
-
+        // Record the roll calling status every period, to make sure the state can be keep if APP restart.
+        MyPreferences.getInstance(this).setList(MEMBER_LIST, BluetoothManager.memberList)
+        //Only update the current fragment for every SCAN_PERIOD.
         RecyclerViewManager.notifyData(viewPager2.currentItem)
-
-        println("regularTask ${viewPager2.currentItem}")
 
         //var currentFragment = supportFragmentManager.findFragmentByTag("f" + viewPager2.currentItem)!!
 
-        //BluetoothManager.memberList.clear()
-
-        Thread.sleep(300)  //stop 1 second for each scan period.
+        Thread.sleep(300)  //stop 0.3 second for each scan period.
         startRollCalling()
     }
 
@@ -117,9 +114,12 @@ class RollCallActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     private fun toolBarSetting () {
-
         toolbar.inflateMenu(R.menu.menu_setting)
-        toolbar.title = intent.getStringExtra("ACCOUNT")
+        toolbar.apply {
+            this.title =
+                intent.getStringExtra("ACCOUNT") + ", " + intent.getStringExtra("LOCATION")
+        }
+
         toolbar.setOnMenuItemClickListener {
             when (it.itemId) {
                 R.id.action_setting -> startActivity(Intent(this, SystemActivity::class.java))
@@ -134,12 +134,30 @@ class RollCallActivity : AppCompatActivity(), View.OnClickListener {
                 if (mScanning) {
                     stopRollCalling()
                     RollCall_scanButton.text = getString(R.string.start_scan)
+                    setRollCallStateText(getString(R.string.roll_call_stop), R.color.black)
                 } else {
                     startRollCalling()
                     RollCall_scanButton.text = getString(R.string.stop_scan)
+                    setRollCallStateText(getString(R.string.roll_calling), R.color.blue_2)
                 }
             }
         }
+    }
+
+    //Called when scan successfully form BluetoothManager.kt
+    override fun onScanDeviceDataResponse() {
+        setRollCallStateText(getString(R.string.roll_calling), R.color.blue_2)
+    }
+    //Called when can error form BluetoothManager.kt
+    override fun onScanDeviceDataErrorResponse(errorCode: Int) {
+        setRollCallStateText(getString(R.string.roll_call_error), R.color.black)
+        Toast.makeText(this, "藍牙掃描錯誤 $errorCode", Toast.LENGTH_LONG).show()
+    }
+
+
+    private fun setRollCallStateText(state: String, color: Int) {
+        RollCall_state.text = state
+        RollCall_state.setTextColor(ContextCompat.getColor(this, color))
     }
 }
 

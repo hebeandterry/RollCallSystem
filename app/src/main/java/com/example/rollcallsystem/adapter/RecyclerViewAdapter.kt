@@ -7,18 +7,15 @@ import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.core.content.ContextCompat.getColor
 import androidx.recyclerview.widget.RecyclerView
 import com.example.rollcallsystem.R
 import com.example.rollcallsystem.data.MemberFormat
-import com.example.rollcallsystem.feature.BluetoothManager
 import com.example.rollcallsystem.feature.RecyclerViewManager
-import java.lang.Math.min
 
-class RecyclerViewAdapter(data: List<MemberFormat>, category: String) : RecyclerView.Adapter<RecyclerViewAdapter.ListItemViewHolder>() {
+class RecyclerViewAdapter(data: List<MemberFormat>, private var category: String) : RecyclerView.Adapter<RecyclerViewAdapter.ListItemViewHolder>() {
     private var clickListener: AdapterView.OnItemClickListener? = null
     private var data = data.toMutableList()
-    private var category = category
 
     init {
         println("RecyclerViewAdapter init")
@@ -96,13 +93,16 @@ class RecyclerViewAdapter(data: List<MemberFormat>, category: String) : Recycler
             tvMac.text = data.mac
             tvName.text = data.name
 
+            //Set arriving text color according to bArrived.
             if (data.bArrived) {
-                tvArrived.text = "抵達"
-                tvArrived.setBackgroundColor(Color.GREEN)
+                tvArrived.text = itemView.context.getString(R.string.arrived)
+                tvArrived.setTextColor(getColor(itemView.context, R.color.grey_5))
+                tvArrived.setBackgroundResource(R.color.green_1)
             } else
             {
-                tvArrived.text = "尚未抵達"
-                tvArrived.setBackgroundColor(Color.WHITE)
+                tvArrived.text = itemView.context.getString(R.string.not_arrive)
+                tvArrived.setTextColor(Color.BLACK)
+                tvArrived.setBackgroundColor(Color.TRANSPARENT)
             }
         }
 
